@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "BrotaVivi",
+    "slug": "brota-vivi",
+    "scheme": "brotavivi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "jsEngine": "hermes",
+    "extra": {
+      "API_URL": "http://10.0.2.2:3000",
+      "MAPS_API_KEY": "AIzaSyA7paWgup5U9X3FutB-cv3XPOmhY-ci6xQ",
+      "router": {},
+      "eas": {
+        "projectId": "dbce8ac8-6987-4ecc-8541-edd3c93caec5"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.gareky1.brotavivi",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA7paWgup5U9X3FutB-cv3XPOmhY-ci6xQ"
+        }
+      }
+    }
+  }
+}
