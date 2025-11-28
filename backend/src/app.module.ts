@@ -19,7 +19,7 @@ import { UrbanVoid } from './entity/void.entity';
       username: process.env.DB_USER || 'ug9zh2mh6h9zq3km',
       password: process.env.DB_PASS || 'UxSLfFfuCm5c0xlNZMN0',
       database: process.env.DB_NAME || 'b9a5up9zwv1949l5ymvl',
-      autoLoadEntities: false,
+      autoLoadEntities: true,
       synchronize: false,
       entities: [UrbanVoid, VoidSuggestion],
     }),
