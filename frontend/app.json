@@ -4,10 +4,16 @@
     "slug": "brota-vivi",
     "scheme": "brotavivi",
     "version": "1.0.0",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "orientation": "portrait",
     "jsEngine": "hermes",
     "extra": {
-      "API_URL": "http://10.0.2.2:3000",
+      "API_URL": "https://brotarevivi-backend.onrender.com",
       "MAPS_API_KEY": "AIzaSyA7paWgup5U9X3FutB-cv3XPOmhY-ci6xQ",
       "router": {},
       "eas": {

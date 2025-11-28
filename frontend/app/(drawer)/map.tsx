@@ -61,12 +61,14 @@ export default function MapScreen() {
   const [saving, setSaving] = useState(false);
 
   const [editingVoid, setEditingVoid] = useState<UrbanVoid | null>(null);
-
   const [selectedGroup, setSelectedGroup] = useState<VoidGroup | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // -------------------------------
+  // LOCALIZAÇÃO DO USUÁRIO
+  // -------------------------------
   useEffect(() => {
     (async () => {
       try {
@@ -74,7 +76,7 @@ export default function MapScreen() {
 
         if (status !== "granted") {
           setLocationError(
-            "Permissão de localização negada. Usando ponto padrão no Bairro do Recife."
+            "Permissão negada. Usando posição padrão no Bairro do Recife."
           );
           setRegion({
             latitude: -8.063149,
@@ -90,7 +92,6 @@ export default function MapScreen() {
         if (!loc) {
           loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,
-            mayShowUserSettingsDialog: true,
           });
         }
 
@@ -100,12 +101,10 @@ export default function MapScreen() {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         });
+
         setLoading(false);
-      } catch (err) {
-        console.log(err);
-        setLocationError(
-          "Não foi possível obter a localização atual. Usando ponto padrão no Bairro do Recife."
-        );
+      } catch {
+        setLocationError("Erro ao obter localização.");
         setRegion({
           latitude: -8.063149,
           longitude: -34.871311,
@@ -117,37 +116,31 @@ export default function MapScreen() {
     })();
   }, []);
 
+  // -------------------------------
+  // CARREGA VOIDs
+  // -------------------------------
   useEffect(() => {
     (async () => {
       try {
         const data = await listVoids();
         setVoids(data);
-      } catch (err: any) {
-        console.log(
-          "Erro ao carregar voids",
-          err?.response?.data || err.message || err
-        );
+      } catch (err) {
+        console.log("Erro ao carregar voids", err);
       }
     })();
   }, []);
 
+  // Agrupa markers por coordenada
   const groups = useMemo<VoidGroup[]>(() => {
     const map = new Map<string, VoidGroup>();
 
     for (const v of voids) {
-      let lat: number;
-      let lng: number;
-      try {
-        lat = toNumber(v.lat);
-        lng = toNumber(v.lng);
-      } catch {
-        console.log("Coordenada inválida para o ponto:", v);
-        continue;
-      }
+      let lat = toNumber(v.lat);
+      let lng = toNumber(v.lng);
 
       const key = `${lat.toFixed(5)}:${lng.toFixed(5)}`;
-      const existing = map.get(key);
 
+      const existing = map.get(key);
       if (existing) {
         existing.items.push(v);
       } else {
@@ -163,33 +156,29 @@ export default function MapScreen() {
     return Array.from(map.values());
   }, [voids]);
 
+  // Selecionou local no mapa
   function handleMapPress(e: MapPressEvent) {
     if (!creating) return;
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setSelectedCoord({ latitude, longitude });
+    setSelectedCoord(e.nativeEvent.coordinate);
   }
 
+  // Escolher imagem
   async function handlePickImage() {
-    try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        alert("Precisamos de permissão para acessar suas fotos.");
-        return;
-      }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      alert("Permissão negada.");
+      return;
+    }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 0.7,
-      });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.7,
+    });
 
-      if (!result.canceled) {
-        const uris = result.assets.map((asset) => asset.uri);
-        setImages((prev) => [...prev, ...uris]);
-      }
-    } catch (err) {
-      console.log("Erro ao selecionar imagem", err);
+    if (!result.canceled) {
+      const uris = result.assets.map((a) => a.uri);
+      setImages((p) => [...p, ...uris]);
     }
   }
 
@@ -204,47 +193,35 @@ export default function MapScreen() {
   }
 
   async function handleSavePoint() {
-    if (!selectedCoord || !formTitle.trim() || !type.trim() || !risk.trim())
-      return;
+    if (!selectedCoord) return;
+
+    const payload = {
+      title: formTitle.trim(),
+      description: formDescription.trim() || undefined,
+      lat: selectedCoord.latitude,
+      lng: selectedCoord.longitude,
+      type: type.trim(),
+      risk: risk.trim(),
+      photoUrls: images,
+    };
 
     try {
       setSaving(true);
 
       if (editingVoid) {
-        const updated = await updateVoid(editingVoid.id, {
-          title: formTitle.trim(),
-          description: formDescription.trim() || undefined,
-          lat: selectedCoord.latitude,
-          lng: selectedCoord.longitude,
-          type: type.trim(),
-          risk: risk.trim(),
-          photoUrls: images,
-        });
-
+        const updated = await updateVoid(editingVoid.id, payload);
         setVoids((prev) =>
           prev.map((v) => (v.id === updated.id ? updated : v))
         );
       } else {
-        const created = await createVoid({
-          title: formTitle.trim(),
-          description: formDescription.trim() || undefined,
-          lat: selectedCoord.latitude,
-          lng: selectedCoord.longitude,
-          type: type.trim(),
-          risk: risk.trim(),
-          photoUrls: images,
-        });
-
+        const created = await createVoid(payload);
         setVoids((prev) => [...prev, created]);
       }
 
       setCreating(false);
       resetForm();
-    } catch (err: any) {
-      console.log(
-        "Erro ao salvar void",
-        err?.response?.data || err.message || err
-      );
+    } catch (err) {
+      console.log("Erro ao salvar:", err);
     } finally {
       setSaving(false);
     }
@@ -257,22 +234,15 @@ export default function MapScreen() {
   }
 
   function startEditVoid(v: UrbanVoid) {
-    try {
-      const lat = toNumber(v.lat);
-      const lng = toNumber(v.lng);
-
-      setEditingVoid(v);
-      setCreating(true);
-      setSelectedGroup(null);
-      setSelectedCoord({ latitude: lat, longitude: lng });
-      setFormTitle(v.title);
-      setFormDescription(v.description || "");
-      setType(v.type || "");
-      setRisk(v.risk || "");
-      setImages(v.photoUrls ?? []);
-    } catch {
-      console.log("Coordenadas inválidas para edição:", v);
-    }
+    setEditingVoid(v);
+    setCreating(true);
+    setSelectedGroup(null);
+    setSelectedCoord({ latitude: toNumber(v.lat), longitude: toNumber(v.lng) });
+    setFormTitle(v.title);
+    setFormDescription(v.description || "");
+    setType(v.type || "");
+    setRisk(v.risk || "");
+    setImages(v.photoUrls || []);
   }
 
   function startNewSuggestionAtSelectedGroup() {
@@ -291,28 +261,30 @@ export default function MapScreen() {
     setImages([]);
   }
 
-  if (loading || !region) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 8 }}>Carregando mapa...</Text>
-      </View>
-    );
-  }
-
   const currentVoid =
     selectedGroup && selectedGroup.items[selectedIndex]
       ? selectedGroup.items[selectedIndex]
       : null;
 
+  if (loading || !region) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" />
+        <Text>Carregando mapa...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      {/* MAPA */}
       <MapView
         style={StyleSheet.absoluteFillObject}
         initialRegion={region}
         onRegionChangeComplete={setRegion}
         onPress={handleMapPress}
       >
+        {/* Seu ponto aproximado */}
         <Marker
           coordinate={{
             latitude: region.latitude,
@@ -321,13 +293,13 @@ export default function MapScreen() {
           title="Você está aqui (aprox.)"
         />
 
+        {/* MARCADORES DO BANCO */}
         {groups.map((group) => {
-          const preview = group.items[group.items.length - 1] || group.items[0];
-
-          const lastImage =
+          const preview = group.items[group.items.length - 1];
+          const lastImg =
             preview.photoUrls && preview.photoUrls.length > 0
               ? preview.photoUrls[preview.photoUrls.length - 1]
-              : undefined;
+              : null;
 
           return (
             <Marker
@@ -343,134 +315,52 @@ export default function MapScreen() {
                 resetForm();
               }}
             >
-              <View style={styles.markerContainer}>
-                <View style={styles.markerImageWrapper}>
-                  {lastImage ? (
+              <View style={styles.groupMarkerContainer}>
+                {/* CARD SUPERIOR COM IMAGEM */}
+                <View style={styles.groupImageWrapper}>
+                  {lastImg ? (
                     <Image
-                      source={{ uri: lastImage }}
-                      style={styles.markerImage}
+                      source={{ uri: lastImg }}
+                      style={styles.groupImage}
                     />
                   ) : (
-                    <View style={styles.markerPlaceholder} />
+                    <View style={styles.groupImagePlaceholder} />
                   )}
                 </View>
-                <View style={styles.markerPin} />
+
+                {/* PIN ROXO EMBAIXO */}
+                <View style={styles.pinOnlyContainer}>
+                  <View style={styles.pinOuter}>
+                    <View style={styles.pinInner} />
+                  </View>
+                  <View style={styles.pinBaseDot} />
+                </View>
               </View>
             </Marker>
           );
         })}
 
+        {/* MARCADOR DE NOVO PONTO */}
         {creating && selectedCoord && (
           <Marker coordinate={selectedCoord}>
-            <View style={styles.markerContainer}>
-              <View style={styles.markerImageWrapper}>
-                <View style={styles.markerPlaceholder} />
+            <View style={styles.pinOnlyContainer}>
+              <View style={[styles.pinOuter, styles.pinOuterNew]}>
+                <View style={styles.pinInner} />
               </View>
-              <View
-                style={[styles.markerPin, { backgroundColor: "#a855f7" }]}
-              />
+              <View style={[styles.pinBaseDot, styles.pinBaseDotNew]} />
             </View>
           </Marker>
         )}
       </MapView>
 
+      {/* ERRO DE LOCALIZAÇÃO */}
       {locationError && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{locationError}</Text>
         </View>
       )}
 
-      {creating && selectedCoord && (
-        <View style={styles.createCard}>
-          <ScrollView>
-            <Text style={styles.createTitle}>
-              {editingVoid ? "Editar sugestão" : "Nova sugestão"}
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Título do ponto"
-              value={formTitle}
-              onChangeText={setFormTitle}
-            />
-
-            <TextInput
-              style={[styles.input, { height: 80 }]}
-              placeholder="Descrição, observações..."
-              value={formDescription}
-              onChangeText={setFormDescription}
-              multiline
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Tipo (ex.: Terreno vazio, praça, beira de rio...)"
-              value={type}
-              onChangeText={setType}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Grau de risco (ex.: baixo, médio, alto)"
-              value={risk}
-              onChangeText={setRisk}
-            />
-
-            <Text style={styles.imagesLabel}>Imagens</Text>
-            <View style={styles.imagesRow}>
-              {images.map((uri) => (
-                <TouchableOpacity
-                  key={uri}
-                  onPress={() => setPreviewImage(uri)}
-                >
-                  <Image
-                    source={{ uri }}
-                    style={styles.imageThumb}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity
-                style={styles.addImageButton}
-                onPress={handlePickImage}
-              >
-                <Ionicons name="add" size={20} color="#6b7280" />
-                <Text style={styles.addImageText}>Adicionar</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.createActionsRow}>
-              <TouchableOpacity
-                style={[styles.createButton, styles.cancelButton]}
-                onPress={() => {
-                  setCreating(false);
-                  resetForm();
-                }}
-              >
-                <Text style={styles.cancelText}>Cancelar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.createButton, styles.saveButton]}
-                onPress={handleSavePoint}
-                disabled={
-                  saving || !formTitle.trim() || !type.trim() || !risk.trim()
-                }
-              >
-                <Text style={styles.saveText}>
-                  {saving
-                    ? "Salvando..."
-                    : editingVoid
-                    ? "Salvar alterações"
-                    : "Salvar ponto"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      )}
-
+      {/* CARD DE DETALHE DO PONTO SELECIONADO */}
       {selectedGroup && currentVoid && !creating && (
         <View style={styles.detailCard}>
           <Text style={styles.detailTitle}>{currentVoid.title}</Text>
@@ -574,11 +464,106 @@ export default function MapScreen() {
         </View>
       )}
 
+      {/* FORMULÁRIO DE CRIAÇÃO/EDIÇÃO */}
+      {creating && selectedCoord && (
+        <View style={styles.createCard}>
+          <ScrollView>
+            <Text style={styles.createTitle}>
+              {editingVoid ? "Editar sugestão" : "Nova sugestão"}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Título do ponto"
+              placeholderTextColor="#6b7280"
+              value={formTitle}
+              onChangeText={setFormTitle}
+            />
+
+            <TextInput
+              style={[styles.input, { height: 80 }]}
+              placeholder="Descrição, observações..."
+              placeholderTextColor="#6b7280"
+              value={formDescription}
+              onChangeText={setFormDescription}
+              multiline
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Tipo (ex.: Terreno vazio, praça, beira de rio...)"
+              placeholderTextColor="#6b7280"
+              value={type}
+              onChangeText={setType}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Grau de risco (ex.: baixo, médio, alto)"
+              placeholderTextColor="#6b7280"
+              value={risk}
+              onChangeText={setRisk}
+            />
+
+            <Text style={styles.imagesLabel}>Imagens</Text>
+
+            <View style={styles.imagesRow}>
+              {images.map((uri) => (
+                <TouchableOpacity
+                  key={uri}
+                  onPress={() => setPreviewImage(uri)}
+                >
+                  <Image source={{ uri }} style={styles.imageThumb} />
+                </TouchableOpacity>
+              ))}
+
+              <TouchableOpacity
+                style={styles.addImageButton}
+                onPress={handlePickImage}
+              >
+                <Ionicons name="add" size={20} color="#6b7280" />
+                <Text style={styles.addImageText}>Adicionar</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* BOTÕES */}
+            <View style={styles.createActionsRow}>
+              <TouchableOpacity
+                style={[styles.createButton, styles.cancelButton]}
+                onPress={() => {
+                  setCreating(false);
+                  resetForm();
+                }}
+              >
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.createButton, styles.saveButton]}
+                onPress={handleSavePoint}
+                disabled={
+                  saving || !formTitle.trim() || !type.trim() || !risk.trim()
+                }
+              >
+                <Text style={styles.saveText}>
+                  {saving
+                    ? "Salvando..."
+                    : editingVoid
+                    ? "Salvar alterações"
+                    : "Salvar ponto"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* BOTÃO FLUTUANTE */}
       <View style={styles.fabContainer}>
         <TouchableOpacity
           style={[styles.fab, creating && { backgroundColor: "#b45309" }]}
           onPress={() => {
-            setCreating((prev) => !prev);
+            setCreating((p) => !p);
             setSelectedGroup(null);
             resetForm();
           }}
@@ -590,6 +575,7 @@ export default function MapScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* TABS INFERIORES */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={styles.tabItem}
@@ -613,6 +599,7 @@ export default function MapScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* VISUALIZADOR DE IMAGEM */}
       {previewImage && (
         <View style={styles.imageViewerOverlay}>
           <TouchableOpacity
@@ -641,11 +628,8 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+
   errorBox: {
     position: "absolute",
     top: 40,
@@ -661,58 +645,76 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  markerContainer: {
+  // ---------------------
+  // MARKERS ROXOS + CARD DE IMAGEM
+  // ---------------------
+  groupMarkerContainer: {
     alignItems: "center",
   },
-  markerImageWrapper: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
+
+  groupImageWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: "#e5e7eb",
     overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "#e5e7eb",
+    borderWidth: 3,
+    borderColor: "#ffffff",
+    marginBottom: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
   },
-  markerImage: {
+  groupImage: {
     width: "100%",
     height: "100%",
   },
-  markerPlaceholder: {
+  groupImagePlaceholder: {
     flex: 1,
-    backgroundColor: "#e5e7eb",
-  },
-  markerPin: {
-    width: 10,
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: "#7c3aed",
-    marginTop: 4,
+    backgroundColor: "#d1d5db",
   },
 
-  fabContainer: {
-    position: "absolute",
-    bottom: 88,
-    left: 24,
-    right: 24,
+  pinOnlyContainer: {
     alignItems: "center",
   },
-  fab: {
-    flexDirection: "row",
+
+  pinOuter: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#7c3aed",
+    borderWidth: 3,
+    borderColor: "#c4b5fd",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#16a34a",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 999,
-    elevation: 3,
   },
-  fabText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
-    marginLeft: 8,
+  pinInner: {
+    width: 10,
+    height: 10,
+    backgroundColor: "#fff",
+    borderRadius: 5,
+  },
+  pinBaseDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "rgba(124,58,237,0.35)",
+    marginTop: 2,
   },
 
+  pinOuterNew: {
+    backgroundColor: "#8b5cf6",
+    borderColor: "#ddd6fe",
+  },
+  pinBaseDotNew: {
+    backgroundColor: "rgba(139,92,246,0.4)",
+  },
+
+  // ---------------------
+  // FORMULÁRIO
+  // ---------------------
   createCard: {
     position: "absolute",
     left: 16,
@@ -738,6 +740,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 8,
     fontSize: 14,
+    color: "#000",
   },
 
   imagesLabel: {
@@ -799,6 +802,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  // ---------------------
+  // CARD DE DETALHE
+  // ---------------------
   detailCard: {
     position: "absolute",
     left: 16,
@@ -911,6 +917,36 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  // ---------------------
+  // FAB
+  // ---------------------
+  fabContainer: {
+    position: "absolute",
+    bottom: 88,
+    left: 24,
+    right: 24,
+    alignItems: "center",
+  },
+  fab: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#16a34a",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+    elevation: 3,
+  },
+  fabText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+    marginLeft: 8,
+  },
+
+  // ---------------------
+  // TABS
+  // ---------------------
   tabsContainer: {
     position: "absolute",
     bottom: 16,
@@ -940,6 +976,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  // ---------------------
+  // VIEWER DE IMAGEM
+  // ---------------------
   imageViewerOverlay: {
     position: "absolute",
     top: 0,

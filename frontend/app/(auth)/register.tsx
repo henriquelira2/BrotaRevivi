@@ -9,12 +9,14 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-// ⬇️ importa o serviço de registro
-import { register as registerApi } from "../../services/auth"; // ajuste o caminho se necessário
+import { register as registerApi } from "../../services/auth";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -34,7 +36,6 @@ export default function RegisterScreen() {
 
     if (!message) return "Falha ao criar conta.";
 
-    // se vier array de mensagens do class-validator
     if (Array.isArray(message)) {
       return message.join("\n");
     }
@@ -96,104 +97,114 @@ export default function RegisterScreen() {
     >
       <View style={styles.overlay} />
 
-      <View style={styles.container}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("../../assets/logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Cadastro</Text>
-
-          <View style={styles.inputBox}>
-            <TextInput
-              placeholder="Nome completo"
-              placeholderTextColor="#777"
-              value={nome}
-              onChangeText={setNome}
-              style={styles.input}
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
             />
           </View>
 
-          <View style={styles.inputBox}>
-            <TextInput
-              placeholder="E-mail"
-              placeholderTextColor="#777"
-              value={email}
-              onChangeText={setEmail}
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Cadastro</Text>
 
-          <View style={styles.inputBox}>
-            <TextInput
-              placeholder="Senha"
-              placeholderTextColor="#777"
-              value={senha}
-              onChangeText={setSenha}
-              secureTextEntry={!showSenha}
-              style={[styles.input, { paddingRight: 40 }]}
-            />
+            <View style={styles.inputBox}>
+              <TextInput
+                placeholder="Nome completo"
+                placeholderTextColor="#777"
+                value={nome}
+                onChangeText={setNome}
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.inputBox}>
+              <TextInput
+                placeholder="E-mail"
+                placeholderTextColor="#777"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputBox}>
+              <TextInput
+                placeholder="Senha"
+                placeholderTextColor="#777"
+                value={senha}
+                onChangeText={setSenha}
+                secureTextEntry={!showSenha}
+                style={[styles.input, { paddingRight: 40 }]}
+              />
+
+              <TouchableOpacity
+                onPress={() => setShowSenha(!showSenha)}
+                style={styles.eyeButton}
+              >
+                <Ionicons
+                  name={showSenha ? "eye-outline" : "eye-off-outline"}
+                  size={22}
+                  color="#777"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputBox}>
+              <TextInput
+                placeholder="Confirmar senha"
+                placeholderTextColor="#777"
+                value={confirmarSenha}
+                onChangeText={setConfirmarSenha}
+                secureTextEntry={!showConfirmarSenha}
+                style={[styles.input, { paddingRight: 40 }]}
+              />
+
+              <TouchableOpacity
+                onPress={() => setShowConfirmarSenha((prev) => !prev)}
+                style={styles.eyeButton}
+              >
+                <Ionicons
+                  name={showConfirmarSenha ? "eye-outline" : "eye-off-outline"}
+                  size={22}
+                  color="#777"
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-              onPress={() => setShowSenha(!showSenha)}
-              style={styles.eyeButton}
+              style={styles.signInButton}
+              onPress={handleRegister}
+              disabled={loading}
             >
-              <Ionicons
-                name={showSenha ? "eye-outline" : "eye-off-outline"}
-                size={22}
-                color="#777"
-              />
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.signInText}>Criar conta</Text>
+              )}
             </TouchableOpacity>
+
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Já tem uma conta? </Text>
+              <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
+                <Text style={styles.signup}>Entrar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-
-          <View style={styles.inputBox}>
-            <TextInput
-              placeholder="Confirmar senha"
-              placeholderTextColor="#777"
-              value={confirmarSenha}
-              onChangeText={setConfirmarSenha}
-              secureTextEntry={!showConfirmarSenha}
-              style={[styles.input, { paddingRight: 40 }]}
-            />
-
-            <TouchableOpacity
-              onPress={() => setShowConfirmarSenha(!showConfirmarSenha)}
-              style={styles.eyeButton}
-            >
-              <Ionicons
-                name={showConfirmarSenha ? "eye-outline" : "eye-off-outline"}
-                size={22}
-                color="#777"
-              />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.signInButton}
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.signInText}>Criar conta</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Já tem uma conta? </Text>
-            <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-              <Text style={styles.signup}>Entrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
@@ -201,14 +212,20 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   bg: {
     flex: 1,
-    paddingTop: "20%",
+    backgroundColor: "#ffffff", // se faltar imagem em algum ponto, fica branco, não cinza
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255,255,255,0.5)",
   },
+  kav: {
+    flex: 1,
+  },
   container: {
+    flexGrow: 1,
     padding: 24,
+    paddingTop: "20%",
+    paddingBottom: 40,
   },
   logoContainer: {
     alignItems: "center",
@@ -216,7 +233,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 300,
-    height: 240,
+    height: 140,
   },
   card: {
     backgroundColor: "#ffffff",
@@ -227,7 +244,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     width: "90%",
-    left: "5%",
+    alignSelf: "center",
   },
   cardTitle: {
     fontSize: 22,

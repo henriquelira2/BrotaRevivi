@@ -9,8 +9,8 @@ import { Slot } from "expo-router";
 import { login } from "../services/auth";
 import type { User } from "../types/auth";
 import Toast from "react-native-toast-message";
+import * as NavigationBar from "expo-navigation-bar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
 type AuthContextData = {
   user: User | null;
   loadingAuth: boolean;
@@ -65,6 +65,15 @@ function AuthProvider({ children }: { children?: ReactNode }) {
       setLoadingAuth(false);
     }
   }
+
+  useEffect(() => {
+    async function hideNavBar() {
+      await NavigationBar.setVisibilityAsync("hidden");
+      await NavigationBar.setBehaviorAsync("overlay-swipe");
+    }
+
+    hideNavBar();
+  }, []);
 
   async function signOut() {
     setUser(null);

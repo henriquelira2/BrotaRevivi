@@ -9,6 +9,9 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../_layout";
@@ -63,80 +66,90 @@ export default function LoginScreen() {
     >
       <View style={styles.overlay} />
 
-      <View style={styles.container}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("../../assets/logo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <Text style={styles.hello}>Olá!</Text>
-        <Text style={styles.subtitle}>
-          Entre com seu e-mail e senha para acessar o aplicativo.
-        </Text>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Entrar</Text>
-
-          <View style={styles.inputBox}>
-            <TextInput
-              placeholder="Digite seu e-mail"
-              placeholderTextColor="#777"
-              value={email}
-              onChangeText={setEmail}
-              style={styles.input}
-              keyboardType="email-address"
-              autoCapitalize="none"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.logoContainer}>
+            <Image
+              source={require("../../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
             />
           </View>
 
-          <View style={styles.inputBox}>
-            <View style={styles.passwordRow}>
-              <TextInput
-                placeholder="Digite sua senha"
-                placeholderTextColor="#777"
-                value={password}
-                onChangeText={setPassword}
-                style={styles.inputPassword}
-                secureTextEntry={!showPassword}
-              />
+          <Text style={styles.hello}>Olá!</Text>
+          <Text style={styles.subtitle}>
+            Entre com seu e-mail e senha para acessar o aplicativo.
+          </Text>
 
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword((prev) => !prev)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off" : "eye"}
-                  size={20}
-                  color="#555"
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Entrar</Text>
+
+            <View style={styles.inputBox}>
+              <TextInput
+                placeholder="Digite seu e-mail"
+                placeholderTextColor="#777"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.input}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputBox}>
+              <View style={styles.passwordRow}>
+                <TextInput
+                  placeholder="Digite sua senha"
+                  placeholderTextColor="#777"
+                  value={password}
+                  onChangeText={setPassword}
+                  style={styles.inputPassword}
+                  secureTextEntry={!showPassword}
                 />
+
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color="#555"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.signInButton}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.signInText}>Entrar</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Ainda não tem uma conta? </Text>
+              <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
+                <Text style={styles.signup}>Cadastre-se</Text>
               </TouchableOpacity>
             </View>
           </View>
-
-          <TouchableOpacity
-            style={styles.signInButton}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.signInText}>Entrar</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Ainda não tem uma conta? </Text>
-            <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
-              <Text style={styles.signup}>Cadastre-se</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
@@ -152,8 +165,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.5)",
   },
 
-  container: {
+  scrollContent: {
+    flexGrow: 1,
     padding: 24,
+    paddingBottom: 40,
   },
 
   logoContainer: {
@@ -163,7 +178,7 @@ const styles = StyleSheet.create({
 
   logo: {
     width: 300,
-    height: 240,
+    height: 140,
   },
 
   hello: {
@@ -217,11 +232,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+
   inputPassword: {
     flex: 1,
     fontSize: 16,
     color: "#000",
   },
+
   eyeButton: {
     paddingHorizontal: 4,
     paddingVertical: 4,
