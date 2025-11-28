@@ -1,7 +1,10 @@
-import axios, { AxiosHeaders } from "axios";
 import Constants from "expo-constants";
+import { router } from "expo-router"; 
+import axios, { AxiosHeaders } from "axios";
+import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert } from "react-native";
+
+let isRedirecting = false;
 
 const API_URL =
   (Constants.expoConfig?.extra as any)?.API_URL || "http://localhost:3000";
@@ -33,10 +36,20 @@ api.interceptors.response.use(
     if (status === 401 && message === "Unauthorized") {
       await AsyncStorage.removeItem("@token");
 
-      Alert.alert(
-        "Sessão expirada",
-        "Sua sessão expirou. Faça login novamente."
-      );
+      if (!isRedirecting) {
+        isRedirecting = true;
+
+        Toast.show({
+          type: "error",
+          text1: "Sessão expirada",
+          text2: "Faça login novamente.",
+        });
+
+        setTimeout(() => {
+          router.replace("/login");
+          isRedirecting = false;
+        }, 800);
+      }
     }
 
     return Promise.reject(error);

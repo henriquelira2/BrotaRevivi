@@ -7,46 +7,54 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../_layout";
 import { listVoids, UrbanVoid } from "../../services/voids";
+import { useRouter } from "expo-router";
 
 const POINTS_PER_VOID = 10;
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth() as any;
+  const router = useRouter();
 
   const [totalVoids, setTotalVoids] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const name = user?.name || "Usuário";
   const email = user?.email || "";
   const avatarUrl = user?.avatarUrl as string | undefined;
 
-  useEffect(() => {
-    async function loadStats() {
-      try {
-        if (!user?.id) {
-          setLoading(false);
-          return;
-        }
+  async function loadStats(isRefreshing = false) {
+    try {
+      if (!user?.id) {
+        if (!isRefreshing) setLoading(false);
+        return;
+      }
 
-        const voids = await listVoids();
-        const myVoids = voids.filter((v: UrbanVoid) => v.createdBy === user.id);
+      if (!isRefreshing) setLoading(true);
 
-        setTotalVoids(myVoids.length);
-        setTotalPoints(myVoids.length * POINTS_PER_VOID);
-      } catch (err) {
-        console.log("Erro ao carregar estatísticas do perfil:", err);
-      } finally {
+      const voids = await listVoids();
+      const myVoids = voids.filter((v: UrbanVoid) => v.createdBy === user.id);
+
+      setTotalVoids(myVoids.length);
+      setTotalPoints(myVoids.length * POINTS_PER_VOID);
+    } catch (err) {
+      console.log("Erro ao carregar estatísticas do perfil:", err);
+    } finally {
+      if (!isRefreshing) {
         setLoading(false);
       }
     }
+  }
 
-    loadStats();
+  useEffect(() => {
+    loadStats(false);
   }, [user?.id]);
 
   const level =
@@ -63,12 +71,40 @@ export default function ProfileScreen() {
     );
   }
 
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadStats(true);
+    setRefreshing(false);
+  };
+
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-   
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#22c55e"
+            colors={["#22c55e"]}
+          />
+        }
+      >
         <View style={styles.headerCard}>
           <View style={styles.headerRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.backButton}
+              onPress={handleGoBack}
+            >
+              <Ionicons name="chevron-back" size={22} color="#E5E7EB" />
+              <Text style={styles.backText}>Voltar</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity activeOpacity={0.7}>
               <Ionicons
                 name="notifications-outline"
@@ -153,7 +189,11 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Atalhos</Text>
 
-          <View style={styles.actionCard}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            activeOpacity={0.8}
+            onPress={() => router.push("/meus-pontos")}
+          >
             <View style={styles.actionIconCircle}>
               <Ionicons name="trophy-outline" size={20} color="#eab308" />
             </View>
@@ -164,9 +204,13 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.actionCard}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            activeOpacity={0.8}
+            onPress={() => router.push("/map")}
+          >
             <View
               style={[styles.actionIconCircle, { backgroundColor: "#eef2ff" }]}
             >
@@ -179,7 +223,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -226,7 +270,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0f172a", 
+    backgroundColor: "#0f172a",
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -243,11 +287,23 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  backText: {
+    color: "#E5E7EB",
+    fontSize: 13,
   },
   avatarWrapper: {
     alignSelf: "center",
-    marginTop: 4,
+    marginTop: 12,
     marginBottom: 12,
   },
   avatar: {

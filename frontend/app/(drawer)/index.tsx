@@ -19,6 +19,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<any>();
 
+  const handleLogout = () => {
+    signOut();
+    router.replace("/login");
+  };
+
   return (
     <ImageBackground
       source={require("../../assets/background2.png")}
@@ -28,7 +33,6 @@ export default function HomeScreen() {
       <View style={styles.overlay} />
 
       <View style={styles.screen}>
-  
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.menuButton}
@@ -113,7 +117,6 @@ export default function HomeScreen() {
             </View>
 
             <View className="quickActionsGrid" style={styles.quickActionsGrid}>
-          
               <TouchableOpacity
                 style={styles.quickCard}
                 activeOpacity={0.85}
@@ -163,7 +166,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.quickCard}
                 activeOpacity={0.85}
-                onPress={signOut}
+                onPress={handleLogout}
               >
                 <View style={styles.quickIconWrapper}>
                   <Ionicons name="log-out" size={24} color="#ef4444" />

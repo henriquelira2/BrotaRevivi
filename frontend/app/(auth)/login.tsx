@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../_layout";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   function getErrorMessage(err: any): string {
     const message = err?.response?.data?.message;
@@ -91,14 +93,28 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputBox}>
-            <TextInput
-              placeholder="Digite sua senha"
-              placeholderTextColor="#777"
-              value={password}
-              onChangeText={setPassword}
-              style={styles.input}
-              secureTextEntry
-            />
+            <View style={styles.passwordRow}>
+              <TextInput
+                placeholder="Digite sua senha"
+                placeholderTextColor="#777"
+                value={password}
+                onChangeText={setPassword}
+                style={styles.inputPassword}
+                secureTextEntry={!showPassword}
+              />
+
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#555"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -146,14 +162,15 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 200,
-    height: 140,
+    width: 300,
+    height: 240,
   },
 
   hello: {
     fontSize: 32,
     fontWeight: "bold",
     color: "#0a0a0a",
+    left: "5%",
   },
 
   subtitle: {
@@ -161,13 +178,7 @@ const styles = StyleSheet.create({
     color: "#444",
     marginTop: 4,
     marginBottom: 30,
-  },
-
-  helper: {
-    fontSize: 13,
-    color: "#555",
-    marginTop: 4,
-    marginBottom: 20,
+    left: "5%",
   },
 
   card: {
@@ -178,6 +189,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    width: "90%",
+    left: "5%",
   },
 
   cardTitle: {
@@ -198,6 +211,20 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 16,
     color: "#000",
+  },
+
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  inputPassword: {
+    flex: 1,
+    fontSize: 16,
+    color: "#000",
+  },
+  eyeButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
 
   signInButton: {

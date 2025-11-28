@@ -7,6 +7,7 @@ import {
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../_layout";
+import { useRouter } from "expo-router";
 
 function getInitials(name: string) {
   const parts = name.trim().split(" ");
@@ -20,10 +21,16 @@ function getInitials(name: string) {
 function CustomDrawerContent(props: DrawerContentComponentProps) {
   const { user, signOut } = useAuth() as any;
   const navigation = props.navigation;
+  const router = useRouter(); // 👈 PARA REDIRECIONAR
 
   const name = user?.name || "Usuário";
   const email = user?.email || "";
   const avatarUrl = user?.avatarUrl as string | undefined;
+
+  const handleLogout = () => {
+    signOut();
+    router.replace("/login");
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -91,7 +98,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       <View style={styles.logoutContainer}>
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={signOut}
+          onPress={handleLogout}
           activeOpacity={0.85}
         >
           <Ionicons name="log-out-outline" size={20} color="#ef4444" />

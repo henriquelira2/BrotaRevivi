@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -7,9 +6,10 @@ import React, {
   ReactNode,
 } from "react";
 import { Slot } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { login } from "../services/auth"; 
+import { login } from "../services/auth";
 import type { User } from "../types/auth";
+import Toast from "react-native-toast-message";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type AuthContextData = {
   user: User | null;
@@ -77,6 +77,7 @@ function AuthProvider({ children }: { children?: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ user, loadingAuth, signIn, signOut }}>
+      <Toast />
       {children ?? <Slot />}
     </AuthContext.Provider>
   );

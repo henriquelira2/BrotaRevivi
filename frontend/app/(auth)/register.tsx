@@ -215,8 +215,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   logo: {
-    width: 200,
-    height: 140,
+    width: 300,
+    height: 240,
   },
   card: {
     backgroundColor: "#ffffff",
@@ -226,6 +226,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
+    width: "90%",
+    left: "5%",
   },
   cardTitle: {
     fontSize: 22,

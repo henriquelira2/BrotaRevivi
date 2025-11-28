@@ -6,11 +6,15 @@ import {
   ImageBackground,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl, 
 } from "react-native";
 import background2 from "../../assets/background2.png";
 
 import { useAuth } from "../_layout";
 import { listVoids, UrbanVoid } from "../../services/voids";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 type HistoricoItem = {
   id: string;
@@ -36,138 +40,172 @@ function getNivel(points: number): string {
 
 export default function MeusPontosScreen() {
   const { user } = useAuth() as any;
+  const router = useRouter();
 
   const [totalPontos, setTotalPontos] = useState(0);
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); 
   const [error, setError] = useState<string | null>(null);
 
   const nivel = getNivel(totalPontos);
 
-  useEffect(() => {
-    async function carregarPontos() {
-      try {
-        if (!user?.id) {
-          setError("Usuário não encontrado.");
-          setLoading(false);
-          return;
-        }
+  async function loadPontos(isRefreshing = false) {
+    try {
+      if (!user?.id) {
+        setError("Usuário não encontrado.");
+        if (!isRefreshing) setLoading(false);
+        return;
+      }
 
-        setLoading(true);
-        setError(null);
+      if (!isRefreshing) setLoading(true);
+      setError(null);
 
-        const voids = await listVoids();
+      const voids = await listVoids();
 
-        const meusVoids = voids.filter(
-          (v: UrbanVoid) => v.createdBy === user.id
-        );
+      const meusVoids = voids.filter((v: UrbanVoid) => v.createdBy === user.id);
 
-        const pontos = meusVoids.length * POINTS_PER_VOID;
-        setTotalPontos(pontos);
+      const pontos = meusVoids.length * POINTS_PER_VOID;
+      setTotalPontos(pontos);
 
-        const hist: HistoricoItem[] = meusVoids
-          .slice()
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-          .map((v) => ({
-            id: v.id,
-            descricao: `Vazio urbano "${v.title || v.type}" cadastrado`,
-            data: formatDate(v.createdAt),
-            pontos: POINTS_PER_VOID,
-            tipo: "credito",
-          }));
+      const hist: HistoricoItem[] = meusVoids
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+        .map((v) => ({
+          id: v.id,
+          descricao: `Vazio urbano "${v.title || v.type}" cadastrado`,
+          data: formatDate(v.createdAt),
+          pontos: POINTS_PER_VOID,
+          tipo: "credito",
+        }));
 
-        setHistorico(hist);
-      } catch (e: any) {
-        console.error(e);
-        setError("Não foi possível carregar seus pontos no momento.");
-      } finally {
+      setHistorico(hist);
+    } catch (e: any) {
+      console.error(e);
+      setError("Não foi possível carregar seus pontos no momento.");
+    } finally {
+      if (!isRefreshing) {
         setLoading(false);
       }
     }
+  }
 
-    carregarPontos();
+  useEffect(() => {
+    loadPontos(false);
   }, [user?.id]);
+
+  const handleGoBack = () => {
+    router.back();
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadPontos(true);
+    setRefreshing(false);
+  };
 
   return (
     <ImageBackground source={background2} style={styles.background}>
       <View style={styles.overlay}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Meus pontos</Text>
-          <Text style={styles.subtitle}>
-            Acompanhe sua jornada de impacto positivo 🌱
-          </Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 24 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#FFF"
+              colors={["#FFF"]}
+            />
+          }
+        >
+          <View style={styles.header}>
+            <View style={styles.headerRow}>
+              <TouchableOpacity
+                style={styles.backButton}
+                activeOpacity={0.7}
+                onPress={handleGoBack}
+              >
+                <Ionicons name="chevron-back" size={22} color="#FFF" />
+                <Text style={styles.backText}>Voltar</Text>
+              </TouchableOpacity>
+            </View>
 
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#FFF" />
-            <Text style={styles.loadingText}>Carregando seus pontos...</Text>
+            <Text style={styles.title}>Meus pontos</Text>
+            <Text style={styles.subtitle}>
+              Acompanhe sua jornada de impacto positivo 🌱
+            </Text>
           </View>
-        ) : error ? (
-          <View style={styles.center}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : (
-          <>
-            <View style={styles.cardPontos}>
-              <Text style={styles.cardLabel}>Total de pontos</Text>
-              <Text style={styles.cardPontosValor}>{totalPontos}</Text>
-              <View style={styles.nivelContainer}>
-                <Text style={styles.nivelLabel}>Nível atual:</Text>
-                <Text style={styles.nivelValor}>{nivel}</Text>
+
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color="#FFF" />
+              <Text style={styles.loadingText}>Carregando seus pontos...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.center}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.cardPontos}>
+                <Text style={styles.cardLabel}>Total de pontos</Text>
+                <Text style={styles.cardPontosValor}>{totalPontos}</Text>
+                <View style={styles.nivelContainer}>
+                  <Text style={styles.nivelLabel}>Nível atual:</Text>
+                  <Text style={styles.nivelValor}>{nivel}</Text>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Como funcionam os pontos?</Text>
-              <Text style={styles.sectionText}>
-                Você acumula pontos ao cadastrar vazios urbanos e participar das
-                ações do território. Cada cadastro confirmado rende pontos que
-                podem ser usados em recompensas e benefícios futuros.
-              </Text>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Histórico de atividades</Text>
-              {historico.length === 0 ? (
-                <Text style={styles.sectionText}>
-                  Você ainda não cadastrou nenhum vazio urbano. Comece agora
-                  para acumular pontos! 🌱
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  Como funcionam os pontos?
                 </Text>
-              ) : (
-                <ScrollView
-                  style={styles.historicoList}
-                  contentContainerStyle={{ paddingBottom: 24 }}
-                >
-                  {historico.map((item) => (
-                    <View key={item.id} style={styles.historicoItem}>
-                      <View style={styles.historicoTexto}>
-                        <Text style={styles.historicoDescricao}>
-                          {item.descricao}
+                <Text style={styles.sectionText}>
+                  Você acumula pontos ao cadastrar vazios urbanos e participar
+                  das ações do território. Cada cadastro confirmado rende pontos
+                  que podem ser usados em recompensas e benefícios futuros.
+                </Text>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Histórico de atividades</Text>
+                {historico.length === 0 ? (
+                  <Text style={styles.sectionText}>
+                    Você ainda não cadastrou nenhum vazio urbano. Comece agora
+                    para acumular pontos! 🌱
+                  </Text>
+                ) : (
+                  <View style={styles.historicoList}>
+                    {historico.map((item) => (
+                      <View key={item.id} style={styles.historicoItem}>
+                        <View style={styles.historicoTexto}>
+                          <Text style={styles.historicoDescricao}>
+                            {item.descricao}
+                          </Text>
+                          <Text style={styles.historicoData}>{item.data}</Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.historicoPontos,
+                            item.tipo === "credito"
+                              ? styles.historicoCredito
+                              : styles.historicoDebito,
+                          ]}
+                        >
+                          {item.tipo === "credito" ? "+" : ""}
+                          {item.pontos}
                         </Text>
-                        <Text style={styles.historicoData}>{item.data}</Text>
                       </View>
-                      <Text
-                        style={[
-                          styles.historicoPontos,
-                          item.tipo === "credito"
-                            ? styles.historicoCredito
-                            : styles.historicoDebito,
-                        ]}
-                      >
-                        {item.tipo === "credito" ? "+" : ""}
-                        {item.pontos}
-                      </Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-          </>
-        )}
+                    ))}
+                  </View>
+                )}
+              </View>
+            </>
+          )}
+        </ScrollView>
       </View>
     </ImageBackground>
   );
@@ -185,6 +223,20 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginBottom: 12,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  backText: {
+    color: "#FFF",
+    fontSize: 14,
   },
   title: {
     fontSize: 28,
@@ -254,7 +306,6 @@ const styles = StyleSheet.create({
     color: "#F1F1F1",
   },
   historicoList: {
-    maxHeight: 260,
     marginTop: 8,
   },
   historicoItem: {
