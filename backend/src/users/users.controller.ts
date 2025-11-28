@@ -9,9 +9,9 @@ import {
   UseGuards,
   ParseUUIDPipe, 
 } from '@nestjs/common';
-import { User } from 'src/entity/user.entity';
+import { User } from '../entity/user.entity';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 type SafeUser = Omit<User, 'passwordHash'>;
 

@@ -10,10 +10,10 @@ import {
   ParseIntPipe,
   Patch,
 } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { VoidsService } from './voids.service';
 import { CreateVoidDto } from './dto/create-void.dto';
-import { UrbanVoid } from 'src/entity/void.entity';
+import { UrbanVoid } from '../entity/void.entity';
 import { UpdateVoidDto } from './dto/update-void.dto';
 
 @UseGuards(JwtAuthGuard)

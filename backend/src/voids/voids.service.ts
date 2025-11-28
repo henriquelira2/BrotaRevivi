@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UrbanVoid } from 'src/entity/void.entity';
+import { UrbanVoid } from '../entity/void.entity';
 import { CreateVoidDto } from './dto/create-void.dto';
 import { UpdateVoidDto } from './dto/update-void.dto';
 

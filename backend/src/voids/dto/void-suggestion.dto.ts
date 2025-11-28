@@ -1,4 +1,4 @@
-import { UrbanVoid } from 'src/entity/void.entity';
+import { UrbanVoid } from '../../entity/void.entity';
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 
 
